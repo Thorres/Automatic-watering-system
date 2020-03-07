@@ -24,6 +24,7 @@ This prokect can be deployed in 2 different manners.
 ```
 docker run -it -d NAME TBD
 ```
+2 - As 
 
 ## Built With
 

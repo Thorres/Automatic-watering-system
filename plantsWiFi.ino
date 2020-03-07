@@ -11,34 +11,31 @@ int ledState = LOW;
 String strOne = "{\"Data\": { \"Test\" : \"FromTheArduino Body with ";
 String strTwo = strOne + counter;
 String body = strTwo + "\"}}";
-
 void setup()
 {
     // Pins
     pinMode(buttonPin, INPUT);
     pinMode(ledPin, OUTPUT);
     pinMode(ledResponsePin, OUTPUT);
+    
     // Serial
 	Serial.begin(115200);
     Serial1.begin(115200);
     Serial.println("The beginning...");
     
     // Init wifi module
-    initModule();
+    initWifiModule();
 }
 
 void loop() {
-    buttonState = digitalRead(buttonPin);
-    if(!Serial1.available()){
-        while(!Serial1.available()){
-            delay(100);
-        }
+    if(Serial1.available() > 0){
         printResponse(2000);
     }
+
+    buttonState = digitalRead(buttonPin);
     if(buttonState == HIGH){
         digitalWrite(ledPin, HIGH);
         counter = counter + 1;
-        Serial.write(counter);
         strTwo = strOne + counter;
         body = strTwo + "\"}}";
         makeTCPRequest(body);
@@ -46,13 +43,13 @@ void loop() {
     }
 }
 
-void initModule() {
+void initWifiModule() {
     Serial1.println("AT+RST");
     printResponse(5000);
     Serial1.println("AT+CWMODE=3");
-    printResponse(5000);
+    printResponse(1000);
     Serial1.println("AT+CIPMUX=1");
-    printResponse(5000);
+    printResponse(1000);
     Serial1.println("AT+CWJAP=\"Willard_2.0\",\"after5a8\"");
     printResponse(10000);
     Serial1.println("AT+CIPSERVER=1");
@@ -62,17 +59,17 @@ void initModule() {
 }
 
 void makeTCPRequest(String body) {
-    Serial1.println("AT+CIPSTART=\"TCP\",\"192.168.0.102\",5000"); // Make the TCP connection
+    Serial1.println("AT+CIPSTART=0,\"TCP\",\"192.168.0.102\",5000"); // Make the TCP connection
     printResponse(2000);
-    Serial1.println("AT+CIPSEND=51");                        // Send the length of the data to be sent
+    Serial1.println("AT+CIPSEND=0,51");                        // Send the length of the data to be sent
     printResponse(2000);
     Serial1.println(body);
     printResponse(2000);
-    Serial1.println("AT+CIPCLOSE");
+    Serial1.println("AT+CIPCLOSE=0");
     printResponse(2000);
 }
 
-void printResponse(const int timeout){
+bool printResponse(const int timeout){
     String response = "";
     long int time = millis();
     while((time+timeout) > millis()){
@@ -93,4 +90,10 @@ void printResponse(const int timeout){
         Serial.println("Setting led to low");
     }
     Serial.println(response);
+
+    if (response.indexOf("ERROR") > 0){
+        return false;
+    }
+    else
+        return true;
 }

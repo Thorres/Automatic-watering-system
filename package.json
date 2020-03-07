@@ -9,9 +9,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@angular/common": "^9.0.5",
+    "@angular/core": "^9.0.5",
+    "@angular/material": "^9.1.1",
     "angular": "^1.7.9",
+    "angular-progress-bar": "^1.0.11",
     "axios": "^0.19.2",
+    "cors": "^2.8.5",
     "express": "^4.17.1",
-    "net": "^1.0.2"
+    "net": "^1.0.2",
+    "rxjs": "^6.5.4"
   }
 }
