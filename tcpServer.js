@@ -25,7 +25,7 @@ net.createServer(function (socket) {
     if(request.command == "Init"){
       initPlantsValues(socket);
     }
-    else if (request.command == "Make-Request"){
+    else {
       doHTTRequest(request);
     }
   });
