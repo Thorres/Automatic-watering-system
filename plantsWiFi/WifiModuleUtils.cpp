@@ -29,13 +29,31 @@ void WifiModule::makeTCPRequest(String body) {
     Serial1.println(_TCPConnectionString);
     printResponse(2000);
     String sendLength = "AT+CIPSEND=0," + String(body.length());
-    Serial.println("sendLength : " + sendLength);
     Serial1.println(sendLength);                       
     printResponse(2000);
     Serial1.println(body);
     printResponse(3000);
     Serial1.println("AT+CIPCLOSE=0");
     printResponse(2000);
+}
+
+String WifiModule::constructAddReq(struct_plante Plant) {
+    String request = "{\"command\":\"ADD\",";
+    request += "\"Plant\" : {";
+    request += "\"name\" : \"";
+    request += Plant.name;
+    request += "\",\"room\" : \"";
+    request += Plant.room;
+    request += "\",\"humidityLevel\" : \"";
+    request += Plant.humidityLevel;
+    request += "\"}}";
+    Serial.println(request);
+    return request;
+}
+
+String WifiModule::constructUpdateReq(struct_plante Plant){
+    String request = "\"command\":\"UPDATE\"";
+    return request;
 }
 
 String WifiModule::printResponse(long int timeout){

@@ -6,7 +6,9 @@
 SoftwareSerial Serial1(6, 7); // RX, TX
 #endif
 
+#include "PlantsUtils.h"
 #include "Arduino.h"
+
 
 class WifiModule {
     public:
@@ -14,6 +16,8 @@ class WifiModule {
         void initialize();
         void makeTCPRequest(String body);
         String printResponse(long int timeout);
+        String constructAddReq(struct_plante Plant);
+        String constructUpdateReq(struct_plante Plant);
     private:
         String _SSID;
         String _Password;

@@ -1,4 +1,5 @@
 #include "WifiModuleUtils.h"
+#include "PlantsUtils.h"
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <TimeLib.h>
@@ -16,347 +17,182 @@ int ledState = LOW;
 
 WifiModule wifiModule(SSID, Password, TCPServer, TCPPort);
 
-    // FELIX ******************************************
-//les donnes de chaque plante se trouve dans une structure plante
-struct plante
-{
-  //ces valeurs n'ont pas besoin d'etre modifiees manuellement
-  time_t dernier_arrosage; //time code de la derniere fois que cette plante a ete arrosee
-  int lecture_capteur;     //derniere lecture du capteur d'humidite
-  //ces valeurs doivent etre modifiees manuellement dans la partie setup()
-  String nom;
-  String piece;
-  int limite_humidite;     //treshold au dessus duquel la plante sera arrosee (0-1023, sujet a ajustement)
-  int analog_capteur;      //pin analog du capteur de cette plante
-  int pompe;               //pin digital de la base du transistor de cette plante
-};
-
 #define NB_PLANTE  2
 #define PIN_DROITE 22        //pin digital du bouton de controle droit 
 #define PIN_CENTRE 24        //pin digital du bouton de controle centre
 #define PIN_GAUCHE 26        //pin digital du bouton de controle gauche
 #define PIN_POWER_CAPTEUR 30 //pin digital de l'alimentation des capteurs
 
-plante liste_plante[NB_PLANTE];
+struct_plante liste_plante[NB_PLANTE];
 
 time_t derniere_lecture;           //time code de la derniere lecture des capteurs
 LiquidCrystal_I2C lcd(0x27,20,4);
-int bouton[3];                     //contient l'etat des boutons pour cette lecture
+int tempsarrosage = 4;             //temps d'arrosage en seconde. Ajustable dans le menu 2
 int i;
-int menu_vu;
-int menu_actif;
-int tempslecture;                  //temps entre les lectures en minute. Ajustable dans le menu 1
-int tempsarrosage;                 //temps d'arrosage en seconde. Ajustable dans le menu 2
-int plante_active;                 //index de la plante a afficher dans le menu 3
-bool changement;                   //indique que l'ecran doit etre rafaichi
+int tempslecture;
 /*********************************************************/
-
-
+Plants myPlants = Plants();
+struct_plante plant1;
+struct_plante plant2;
+struct_plante plant3;
+struct_plante plant4;
+struct_plante plant5;
+struct_plante plant6;
 
 void setup()
 {
+    lcd.init();
+    lcd.backlight();    
+    lcd.setCursor(0,0);
+    lcd.print("Initializing...");
     // Pins
     pinMode(buttonPin, INPUT);  //temp
     pinMode(ledPin, OUTPUT);    //temp
-    
+
+    pinMode(PIN_DROITE , INPUT);
+    pinMode(PIN_CENTRE , INPUT);
+    pinMode(PIN_GAUCHE , INPUT);
+
     // Serial
-	Serial.begin(115200);
+	  Serial.begin(115200);
     Serial1.begin(115200);
     Serial.println("Serial ports initialized!");
 
     // Init wifi module
     wifiModule.initialize();
-
-    // FELIX ******************************************
+    initAndAddPlants();
+    myPlants.mainMenu(lcd);
     derniere_lecture = now();
-  pinMode(PIN_DROITE , INPUT);
-  pinMode(PIN_CENTRE , INPUT);
-  pinMode(PIN_GAUCHE , INPUT);
-  lcd.init();
-  lcd.backlight();
-  changement = false;
-  plante_active = 0;
-  menu_vu = 1;
-  menu_actif = 0;
-  afficher_menu(menu_actif,menu_vu);
-  //initialisation des variables des plantes
-  for(i = 0 ; i < NB_PLANTE ; i++)
-  {
-    liste_plante[i].dernier_arrosage = now();
-    liste_plante[i].lecture_capteur = 5;
-  }
-  //les variables nom , piece , limite_humidite , analog_capteur et pompe doivent etre entrees pour chaque plante
-  liste_plante[0].nom = "Plante1";
-  liste_plante[0].piece = "Ta mere";
-  liste_plante[0].limite_humidite = 500;
-  liste_plante[0].analog_capteur = 4;
-  liste_plante[0].pompe = 32;
-  liste_plante[1].nom = "Plante2";
-  liste_plante[1].piece = "Sa mere";
-  liste_plante[1].limite_humidite = 600;
-  liste_plante[1].analog_capteur = 5;
-  liste_plante[1].pompe = 34;
 }
 
 void loop() {
-    if(Serial1.available() > 0){
-        String commandReceived = wifiModule.printResponse(2000);
-    }
+  if(Serial1.available() > 0){
+    String commandReceived = wifiModule.printResponse(2000);
+  }
 
-    buttonState = digitalRead(buttonPin);
-    if(buttonState == HIGH){
-        digitalWrite(ledPin, HIGH);
-        String body = "{\"data\": {\"Plant\":{\
-            \"PlantName\": \"Ti cactus\",\
-            \"humidityLevel\": \"72\"}}}";
-        wifiModule.makeTCPRequest(body);
-        digitalWrite(ledPin, LOW);
-    }
+  buttonState = digitalRead(buttonPin);
+  if(buttonState == HIGH){
+      digitalWrite(ledPin, HIGH);
+      String body = "Test";
+      wifiModule.makeTCPRequest(body);
+      digitalWrite(ledPin, LOW);
+  }
 
-    // FELIX ******************************************
-//Verification du delais depuis la derniere lecture
   if((total_minute()-total_minute(derniere_lecture)) > tempslecture)
   {
     verif_capteur();
     arroser();
   }
+
   //la soustraction sera negative apres un mois complet, la valeur de lecture est donc reinitialisee
   if((total_minute()-total_minute(derniere_lecture)) < 0)
   {
     derniere_lecture = now();
   }
-  
-  bouton[0] = digitalRead(PIN_DROITE);
-  bouton[1] = digitalRead(PIN_CENTRE);
-  bouton[2] = digitalRead(PIN_GAUCHE);
-
-  lire_bouton();
-  
-  if(changement)
-  {
-    afficher_menu(menu_actif , menu_vu);
-    changement = false;
+  if(digitalRead(PIN_DROITE) == HIGH){
+    myPlants.showPlants(lcd);
   }
-
+  if(digitalRead(PIN_GAUCHE) == HIGH){
+    myPlants.mainMenu(lcd);
+  }
+  if(digitalRead(PIN_CENTRE) == HIGH){
+    wifiModule.makeTCPRequest(wifiModule.constructAddReq(myPlants.plants[0]));
+  }
   delay(100);
 }
 
+void initAndAddPlants(){
+  plant1.lastWaterting = now();
+  plant1.humidityLevel = 5;
+  plant1.name = "Mini erable";
+  plant1.room = "Cuisine";
+  plant1.humidityLimit = 500;
+  plant1.analogCaptor = 1;
+  plant1.pump = 31;
+  myPlants.addPlant(plant1);
+  wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant1));
 
-void verif_capteur()
-{
-  //Activation des capteurs
-  for(i = 0 ; i < NB_PLANTE ; i++)
-  {
-    digitalWrite(PIN_POWER_CAPTEUR , HIGH);
-  }
+  plant2.lastWaterting = now();
+  plant2.humidityLevel = 5;
+  plant2.name = "Grosse nenuphare";
+  plant2.room = "Cuisine";
+  plant2.humidityLimit = 500;
+  plant2.analogCaptor = 2;
+  plant2.pump = 32;
+  myPlants.addPlant(plant2);
+  wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant2));
+
+  plant3.lastWaterting = now();
+  plant3.humidityLevel = 5;
+  plant3.name = "Poilue pale";
+  plant3.room = "Fenetre entree";
+  plant3.humidityLimit = 500;
+  plant3.analogCaptor = 3;
+  plant3.pump = 33;
+  myPlants.addPlant(plant3);
+  wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant3));
+
+  plant4.lastWaterting = now();
+  plant4.humidityLevel = 5;
+  plant4.name = "Poilue fonce";
+  plant4.room = "Fenetre cuisine";
+  plant4.humidityLimit = 500;
+  plant4.analogCaptor = 4;
+  plant4.pump = 35;
+  myPlants.addPlant(plant4);
+  wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant4));
+
+  plant5.lastWaterting = now();
+  plant5.humidityLevel = 5;
+  plant5.name = "Potos";
+  plant5.room = "Fenetre salon";
+  plant5.humidityLimit = 500;
+  plant5.analogCaptor = 5;
+  plant5.pump = 36;
+  myPlants.addPlant(plant5);
+  wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant5));
+
+  plant6.lastWaterting = now();
+  plant6.humidityLevel = 5;
+  plant6.name = "Bebe nenuphare";
+  plant6.room = "Cuisine";
+  plant6.humidityLimit = 500;
+  plant6.analogCaptor = 6;
+  plant6.pump = 32;
+  myPlants.addPlant(plant6);
+  wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant6));
+
+}
+
+void verif_capteur() {
+  digitalWrite(PIN_POWER_CAPTEUR , HIGH); // Acivation des capteurs
+
   delay(20);
+
   //Lecture des valeurs d'humidite
-  for(i = 0 ; i < NB_PLANTE ; i++)
+  for(i = 0 ; i < myPlants.plants.size() ; i++)
   {
-    liste_plante[i].lecture_capteur = analogRead(liste_plante[i].analog_capteur);
+    myPlants.plants[i].humidityLevel = analogRead(myPlants.plants[i].analogCaptor);
   }
   delay(20);
-  //Desactivation des capteurs
-  for(i = 0 ; i < NB_PLANTE ; i++)
-  {
-    digitalWrite(PIN_POWER_CAPTEUR , LOW);
-  }
+
+  digitalWrite(PIN_POWER_CAPTEUR , LOW);   //Desactivation des capteurs
 }
 
-void arroser()
-{
-  for(i = 0 ; i < NB_PLANTE ; i++)
+void arroser(){
+  for(i = 0 ; i < myPlants.plants.size() ; i++)
   {
-    if(liste_plante[i].lecture_capteur > liste_plante[i].limite_humidite)
+    if(myPlants.plants[i].humidityLevel > myPlants.plants[i].humidityLimit)
     {
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print("Arrosage de :");
-      lcd.setCursor(0,1);
-      lcd.print(liste_plante[i].nom);
-      lcd.setCursor(0,2);
-      lcd.print("en cours");
-      digitalWrite(liste_plante[i].pompe , HIGH);
+      myPlants.showWatering(lcd, i);
+      digitalWrite(myPlants.plants[i].pump , HIGH);
       delay(tempsarrosage * 1000);
-      digitalWrite(liste_plante[i].pompe , LOW);
-      liste_plante[i].dernier_arrosage = now();
-      changement = true;
+      digitalWrite(myPlants.plants[i].pump , LOW);
+      myPlants.plants[i].lastWaterting = now();
     }
   }
 }
 
-void afficher_menu(int menuactif , int menuvu)
-{
-  if (menuactif == 0)
-  {
-    if (menuvu == 1)
-    {
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print("Modifier l'interval");
-      lcd.setCursor(0,1);
-      lcd.print("de lecture des");
-      lcd.setCursor(0,2);
-      lcd.print("capteurs d'humidite");
-    }
-    if (menuvu == 2)
-    {
-      lcd.clear();
-      lcd.setCursor(0,1);
-      lcd.print("Modifier la duree");
-      lcd.setCursor(0,2);
-      lcd.print("d'arrosage");
-    }
-    if (menuvu == 3)
-    {
-      lcd.clear();
-      lcd.setCursor(0,1);
-      lcd.print("Voir l'etat");
-      lcd.setCursor(0,2);
-      lcd.print("des plantes");
-    }
-  }
-  else if(menuactif == 1)
-  {
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Interval actuel");
-    lcd.setCursor(0,1);
-    lcd.print("entre les lectures");
-    lcd.setCursor(5,3);
-    lcd.print(tempslecture);
-    lcd.print(" minutes");
-  }
-  else if(menuactif == 2)
-  {
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Duree actuel");
-    lcd.setCursor(0,1);
-    lcd.print("de chaque arrosage");
-    lcd.setCursor(5,3);
-    lcd.print(tempsarrosage);
-    lcd.print(" secondes");
-  }
-  else if(menuactif == 3)
-  {
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Nom : ");
-    lcd.print(liste_plante[plante_active].nom);
-    lcd.setCursor(0,1);
-    lcd.print("Piece : ");
-    lcd.print(liste_plante[plante_active].piece);
-    lcd.setCursor(0,2);
-    lcd.print("Derniere arrosage");
-    lcd.setCursor(0,3);
-    lcd.print("il y a ");
-    lcd.print(day(liste_plante[plante_active].dernier_arrosage));
-    lcd.print("j et ");
-    lcd.print(hour(liste_plante[plante_active].dernier_arrosage));
-    lcd.print("h");
-  }
-}
-
-void lire_bouton()
-{
-  //ces if servent a verifier que seulement un bouton a ete appuyer durant la lecture
-  if((bouton[0]==1) and (bouton[1]==0) and (bouton[2]==0))
-  {
-    if(menu_actif == 0)
-    {
-      if(menu_vu == 3)
-      {
-        menu_vu = 1;
-      }
-      else
-      {
-        menu_vu++;
-      }
-    }
-    else if(menu_actif == 1)
-    {
-      tempslecture += 5;
-    }
-    else if(menu_actif == 2)
-    {
-      tempsarrosage += 1;
-    }
-    else if(menu_actif == 3)
-    {
-      if(plante_active == NB_PLANTE-1)
-      {
-        plante_active = 0;
-      }
-      else
-      {
-        plante_active++;
-      }
-    }
-    changement = true;
-  }
-  else if((bouton[0]==0) and (bouton[1]==1) and (bouton[2]==0))
-  {
-    if(menu_actif == 0)
-    {
-      menu_actif = menu_vu;
-    }
-    else
-    {
-      menu_actif = 0;
-    }
-    changement = true;
-  }
-  else if((bouton[0]==0) and (bouton[1]==0) and (bouton[2]==1))
-  {
-    if(menu_actif == 0)
-    {
-      if(menu_vu == 1)
-      {
-        menu_vu = 3;
-      }
-      else
-      {
-        menu_vu--;
-      }
-    }
-    else if(menu_actif == 1)
-    {
-      if(tempslecture == 0)
-      {
-      }
-      else
-      {
-        tempslecture -= 5;
-      }
-    }
-    else if(menu_actif == 2)
-    {
-      if(tempsarrosage == 0)
-      {
-      }
-      else
-      {
-        tempsarrosage -= 1;
-      }
-    }
-    else if(menu_actif == 3)
-    {
-      if(plante_active == 0)
-      {
-        plante_active = NB_PLANTE - 1;
-      }
-      else
-      {
-        plante_active--;
-      }
-    }
-    changement = true;
-  }
-  else
-  {
-  }
-}
 
 int total_minute()
 {
@@ -367,4 +203,3 @@ int total_minute(time_t t)
 {
   return (minute(t) + (60 * hour(t)) + (1440 * day(t)));
 }
-/************************************************************/

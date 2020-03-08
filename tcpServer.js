@@ -17,13 +17,16 @@ net.createServer(function (socket) {
     let request;
     try{
       request = JSON.parse(data.toString());
+      console.log(request);
       socket.write("Data received correctly");
     } catch (err) {
       socket.write("Invalid JSON format for the data.");
       console.error(err);
     }
-    if(request.command == "Init"){
-      initPlantsValues(socket);
+    if(request.command == "ADD"){
+      if(request.Plant != undefined){
+        addPlant(socket, request.Plant);
+      }
     }
     else {
       doHTTRequest(request);
@@ -35,15 +38,19 @@ net.createServer(function (socket) {
   });
 }).listen(5000);
 
-async function initPlantsValues(){
-  let response = await axios.post(WebServerURL + "/plants",{timeout: c_timeout});
-  socket.write(response);
+async function addPlant(socket, Plant){
+  let response = await axios.post("http://localhost:3000/addPlant",
+  {
+    Plant : Plant
+  }
+  ,{timeout: c_timeout});
+  socket.write("Plant was added correctly");
 }
 
 
 async function doHTTRequest(request) {
   try{
-    let promiseHTTP = await axios.post(WebServerURL, { data: request.Data}, {timeout: c_timeout})
+    let promiseHTTP = await axios.post(WebServerURL, {data: request.Data}, {timeout: c_timeout})
     console.log(promiseHTTP.data);
   } catch(err) {
     console.error(err);

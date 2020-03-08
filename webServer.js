@@ -10,7 +10,7 @@ const ESP_TCP_SERVER = "192.168.0.148"
 
 let dataWrite = "Led = HIGH"
 
-let Plants = {"Plants": [
+/*let Plants = { Plants: [
     { 
         name : 'Palmier semi-mort',
         room : 'Salon',
@@ -27,7 +27,7 @@ let Plants = {"Plants": [
         humidityLevel: 12
     },
     { 
-        name: "Grosse nénuphare",
+        name: "Grosse nenuphare",
         room : 'Cuisine',
         humidityLevel: 72
     },
@@ -52,8 +52,8 @@ let Plants = {"Plants": [
         humidityLevel: 72
     },
   ]};
-;
-
+;*/
+let Plants = { Plants: []};
 var corsOptions = {
     origin: 'http://localhost:4201',
     optionsSuccessStatus: 200,
@@ -91,6 +91,7 @@ function updatePlants(body) {
         })
     }    
 }
+
 
 app.route('/')
     .get(function(req, res){
@@ -142,11 +143,17 @@ app.route('/waterPlants')
         }
     });
 
-app.route('addPlant')
+app.route('/addPlant')
     .post(function(req,res){
-        if(verifyPlantsAdd(req)){
+        if(req.body.Plant.name != undefined && req.body.Plant.room != undefined && req.body.Plant.humidityLevel != undefined){
             res.statusCode = 200;
-            res.send("Your new plant named " + req.body.PlantName + " was added.")
+            Plants.Plants.push(req.body.Plant);
+            console.log("Your new plant named " + req.body.PlantName + " was added.")
+            res.send("Your new plant named " + req.body.PlantName + " was added.");
+        }
+        else {
+            res.statusCode = 400;
+            res.send("There was an error, your plant was not added.");
         }
     });
 
