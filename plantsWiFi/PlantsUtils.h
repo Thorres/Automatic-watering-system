@@ -1,22 +1,18 @@
 #ifndef PlantsUtils.h
 #define PlantsUtils.h
 
-#define MAX_NB_PLANTS 2
-#define MAIN_MENU 1
-#define OPTIONS_MENU 2
-#define PLANTS_MENU 3
-#define WATERING_MENU 4
+#define MAX_NB_PLANTS 6
 
 #include "Arduino.h"
 #include <TimeLib.h>
-#include <Vector.h>
+//#include <Vector.h>
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 
 
 struct struct_plante {
   //ces valeurs n'ont pas besoin d'etre modifiees manuellement
-  //time_t lastWaterting; //time code de la derniere fois que cette plante a ete arrosee
+  time_t lastWaterting; //time code de la derniere fois que cette plante a ete arrosee
   int humidityLevel;     //derniere lecture du capteur d'humidite
   //ces valeurs doivent etre modifiees manuellement dans la partie setup()
   String name;
@@ -34,12 +30,12 @@ class Plants {
       struct_plante storage_array[MAX_NB_PLANTS];
       int menuState;
       String mainMenus[3] = {"My plants' state", "Manual watering", "Modify values"};
-      Vector<struct_plante> plants;
+      struct_plante plants[MAX_NB_PLANTS];
 
       Plants();
       void mainMenu(LiquidCrystal_I2C lcd, int index);
       void showWatering(LiquidCrystal_I2C lcd, int index);
-      void addPlant(struct_plante plant);
+      void addPlant(struct_plante plant, int index);
       void showPlants(LiquidCrystal_I2C lcd, int index);
       void manualWatering(LiquidCrystal_I2C lcd, int index);
       void selectValueToModify(LiquidCrystal_I2C lcd, int index);

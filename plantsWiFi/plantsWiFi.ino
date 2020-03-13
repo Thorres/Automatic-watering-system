@@ -26,10 +26,10 @@ int minute_dern_lecture;
 
 //WifiModule wifiModule(SSID, Password, TCPServer, TCPPort);
 
-#define NB_PLANTE  2
-#define PIN_DROITE 8         //pin digital du bouton de controle droit 
-#define PIN_CENTRE 9         //pin digital du bouton de controle centre
-#define PIN_GAUCHE 10        //pin digital du bouton de controle gauche
+#define NB_PLANTE  6
+#define PIN_DROITE 38         //pin digital du bouton de controle droit 
+#define PIN_CENTRE 36         //pin digital du bouton de controle centre
+#define PIN_GAUCHE 34        //pin digital du bouton de controle gauche
 #define PIN_POWER_CAPTEUR 11 //pin digital de l'alimentation des capteurs
 
 #define MAIN_MENU 0
@@ -109,15 +109,15 @@ void loop() {
 
   if(digitalRead(PIN_DROITE) == HIGH){
     buttonClicked = PIN_DROITE;
-    Serial.println("Bouton droit");
+    //Serial.println("Bouton droit");
   }
   if(digitalRead(PIN_GAUCHE) == HIGH){
     buttonClicked = PIN_GAUCHE;
-    Serial.println("Bouton gauche");
+    //Serial.println("Bouton gauche");
   }
   if(digitalRead(PIN_CENTRE) == HIGH){
     buttonClicked = PIN_CENTRE;
-    Serial.println("Bouton centre");
+    //Serial.println("Bouton centre");
     //wifiModule.makeTCPRequest(wifiModule.constructAddReq(myPlants.plants[0]));
   }
   manageMenus(buttonClicked);
@@ -134,8 +134,8 @@ void initAndAddPlants(){
   plant1.analogCaptor = 1;
   plant1.pump = 31;
   plant1.wateringDuration = 5;
-  myPlants.addPlant(plant1);
-  delay(500);
+  myPlants.addPlant(plant1, 0);
+  delay(200);
   //wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant1));*/
 
   //plant2.lastWaterting = now();
@@ -146,29 +146,33 @@ void initAndAddPlants(){
   plant2.analogCaptor = 2;
   plant2.pump = 32;
   plant2.wateringDuration = 5;
-  myPlants.addPlant(plant2);
+  myPlants.addPlant(plant2, 1);
+  delay(200);
   //wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant2));
 
   //plant3.lastWaterting = now();
   plant3.humidityLevel = 5;
   plant3.name = "Poilue pale";
-  plant3.room = "Fenetre entree";
+  plant3.room = "Fenêtre entree";
   plant3.humidityLimit = 500;
   plant3.analogCaptor = 3;
   plant3.pump = 33;
   plant3.wateringDuration = 5;
-  myPlants.addPlant(plant3);
+  myPlants.addPlant(plant3, 2);
+  delay(200);
   //wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant3));
 
   //plant4.lastWaterting = now();
   plant4.humidityLevel = 5;
   plant4.name = "Poilue fonce";
-  plant4.room = "Fenetre cuisine";
+  plant4.room = "Cuisine lavabo";
   plant4.humidityLimit = 500;
   plant4.analogCaptor = 4;
   plant4.pump = 35;
   plant4.wateringDuration = 5;
-  myPlants.addPlant(plant4);
+  myPlants.addPlant(plant4, 3);
+  delay(200);
+
   //wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant4));
 
  // plant5.lastWaterting = now();
@@ -179,7 +183,9 @@ void initAndAddPlants(){
   plant5.analogCaptor = 5;
   plant5.pump = 36;
   plant5.wateringDuration = 5;
-  myPlants.addPlant(plant5);
+  myPlants.addPlant(plant5, 4);
+  delay(200);
+
   //wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant5));
 
   //plant6.lastWaterting = now();
@@ -190,8 +196,17 @@ void initAndAddPlants(){
   plant6.analogCaptor = 6;
   plant6.pump = 32;
   plant6.wateringDuration = 5;
-  myPlants.addPlant(plant6);
+  myPlants.addPlant(plant6, 5);
+  delay(200);
+
   //wifiModule.makeTCPRequest(wifiModule.constructAddReq(plant6));
+  Serial.println(myPlants.plants[0].name);
+  Serial.println(myPlants.plants[1].name);
+  Serial.println(myPlants.plants[2].name);
+  Serial.println(myPlants.plants[3].name);
+  Serial.println(myPlants.plants[4].name);
+  Serial.println(myPlants.plants[5].name);
+  Serial.println(myPlants.plants[6].name);
 
 }
 
@@ -201,7 +216,7 @@ void verif_capteur() {
   delay(20);
 
   //Lecture des valeurs d'humidite
-  for(i = 0 ; i < myPlants.plants.size() ; i++)
+  for(i = 0 ; i < /*myPlants.plants.size()*/ NB_PLANTE ; i++)
   {
     myPlants.plants[i].humidityLevel = analogRead(myPlants.plants[i].analogCaptor);
   }
@@ -211,7 +226,7 @@ void verif_capteur() {
 }
 
 void arroser(){
-  for(i = 0 ; i < myPlants.plants.size() ; i++)
+  for(i = 0 ; i < /*myPlants.plants.size()*/  NB_PLANTE; i++)
   {
     if(myPlants.plants[i].humidityLevel > myPlants.plants[i].humidityLimit)
     {
@@ -270,18 +285,31 @@ void manageMenus(int buttonClicked){
   case PLANTS_MENU:
     if(newMenu){
       myPlants.showPlants(lcd, mainIndex);
+      Serial.println(mainIndex);
       newMenu = false;
     }
     if(buttonClicked == PIN_DROITE){
       if(mainIndex == 6){
         mainIndex = 0;
+        Serial.println(mainIndex);
         myPlants.showPlants(lcd, mainIndex);
+      }
+      else {
+        mainIndex++;
+        myPlants.showPlants(lcd, mainIndex);
+        Serial.println(mainIndex);
       }
     }
     else if(buttonClicked == PIN_GAUCHE){
       if(mainIndex == 0){
         mainIndex = 6;
         myPlants.showPlants(lcd, mainIndex);
+        Serial.println(mainIndex);
+      }
+      else {
+        mainIndex--;
+        myPlants.showPlants(lcd, mainIndex);
+        Serial.println(mainIndex);
       }
     }
     else if(buttonClicked == PIN_CENTRE){
@@ -302,10 +330,18 @@ void manageMenus(int buttonClicked){
         mainIndex = 0;
         myPlants.manualWatering(lcd, mainIndex);
       }
+      else {
+        mainIndex++;
+        myPlants.manualWatering(lcd, mainIndex);
+      }
     }
     else if(buttonClicked == PIN_GAUCHE){
       if(mainIndex == 0){
         mainIndex = 6;
+        myPlants.manualWatering(lcd, mainIndex);
+      }
+      else {
+        mainIndex--;
         myPlants.manualWatering(lcd, mainIndex);
       }
     }
@@ -328,14 +364,21 @@ void manageMenus(int buttonClicked){
     if(buttonClicked == PIN_DROITE){
       if(mainIndex == 7){
         mainIndex = 0;
-        myPlants.selectValueToModify(lcd, mainIndex);
       }
+      else{
+        mainIndex ++;
+      }
+      myPlants.selectValueToModify(lcd, mainIndex);
     }
     else if(buttonClicked == PIN_GAUCHE){
       if(mainIndex == 0){
         mainIndex = 7;
-        myPlants.selectValueToModify(lcd, mainIndex);
-      }    }
+      }
+      else{
+        mainIndex --;
+      }
+      myPlants.selectValueToModify(lcd, mainIndex);
+    }
     else if(buttonClicked == PIN_CENTRE){
       if(mainIndex == 7){
         menuState = MAIN_MENU;
@@ -359,6 +402,7 @@ void manageMenus(int buttonClicked){
       else{
         myPlants.plants[mainIndex].wateringDuration += 1;
       }
+      myPlants.valueModification(lcd, mainIndex);
     }
     else if(buttonClicked == PIN_GAUCHE){
       if(mainIndex == 6){
@@ -370,7 +414,8 @@ void manageMenus(int buttonClicked){
         if(myPlants.plants[mainIndex].wateringDuration > 0){
           myPlants.plants[mainIndex].wateringDuration -= 1;
         }
-      }    
+      }
+      myPlants.valueModification(lcd, mainIndex);    
     }
     else if(buttonClicked == PIN_CENTRE){
       menuState = VALUES_MENU;

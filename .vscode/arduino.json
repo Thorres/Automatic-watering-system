@@ -1,6 +1,6 @@
 {
-    "sketch": "plantsWiFi.ino",
+    "sketch": "plantsWiFi\\plantsWiFi.ino",
     "board": "arduino:avr:mega",
     "configuration": "cpu=atmega2560",
-    "port": "COM4"
+    "port": "COM7"
 }
